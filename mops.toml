@@ -1,0 +1,16 @@
+[dependencies]
+base = "0.12.1"
+
+[package]
+name = "bit-map"
+version = "0.0.1"
+description = "A data structure for fast set operations on a set of integers each represented by a bit."
+repository = "https://github.com/NatLabs/BitMap"
+keywords = ["set"]
+license = "MIT"
+
+[dev-dependencies]
+test = "2.0.0"
+
+[toolchain]
+moc = "0.12.1"
