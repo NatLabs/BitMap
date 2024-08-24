@@ -91,3 +91,15 @@ test(
         assert bitmap.toArray() == [1, 2, 64, 324];
     },
 );
+
+test(
+    "fromArray()",
+    func() {
+        let bitmap = BitMap.fromArray([1, 2, 64, 324]);
+
+        assert bitmap.get(1) == true;
+        assert bitmap.get(2) == true;
+        assert bitmap.get(64) == true;
+        assert bitmap.get(324) == true;
+    },
+);

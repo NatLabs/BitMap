@@ -1,21 +1,29 @@
 import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Nat "mo:base/Nat";
-import Nat8 "mo:base/Nat8";
-import Nat16 "mo:base/Nat16";
-import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Iter "mo:base/Iter";
-import Text "mo:base/Text";
 import Debug "mo:base/Debug";
 
 module {
 
-    let BYTE = 8;
-    let WORD_SIZE : Nat = 64;
+    public let WORD_SIZE : Nat = 64;
 
     func div_ceil(n : Nat, d : Nat) : Nat {
         (n + d - 1) / d;
+    };
+
+    public func fromIter(iter : Iter.Iter<Nat>) : BitMap {
+        let bitmap = BitMap(8);
+        for (n in iter) {
+            bitmap.set(n, true);
+        };
+
+        bitmap;
+    };
+
+    public func fromArray(arr : [Nat]) : BitMap {
+        fromIter(arr.vals());
     };
 
     /// A data structure for fast set operations on a set of integers each represented by a bit.

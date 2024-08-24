@@ -3,7 +3,7 @@ base = "0.12.1"
 
 [package]
 name = "bit-map"
-version = "0.0.1"
+version = "0.1.0"
 description = "A data structure for fast set operations on a set of integers each represented by a bit."
 repository = "https://github.com/NatLabs/BitMap"
 keywords = ["set"]
