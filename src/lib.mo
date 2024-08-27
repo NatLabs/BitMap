@@ -26,6 +26,62 @@ module {
         fromIter(arr.vals());
     };
 
+    public func multiUnion(bitmaps : Iter.Iter<BitMap>) : BitMap {
+
+        let ?first = bitmaps.next() else Debug.trap("multiUnion: Empty iterator");
+
+        var bitmap = first;
+        var only_one = true;
+
+        label merging_bitmaps loop switch (bitmaps.next()) {
+            case (?bitmap2) {
+                only_one := false;
+                if (bitmap2.capacity() > bitmap.capacity()) {
+                    bitmap2._union_no_size_update(bitmap);
+                    bitmap := bitmap2;
+                } else {
+                    bitmap._union_no_size_update(bitmap2);
+                };
+            };
+            case (null) break merging_bitmaps;
+        };
+
+        if (not only_one) {
+            bitmap._update_size();
+        };
+
+        bitmap;
+
+    };
+
+    public func multiIntersect(bitmaps : Iter.Iter<BitMap>) : BitMap {
+
+        let ?first = bitmaps.next() else Debug.trap("multiIntersect: Empty iterator");
+
+        var bitmap = first;
+        var only_one = true;
+
+        label merging_bitmaps loop switch (bitmaps.next()) {
+            case (?bitmap2) {
+                only_one := false;
+                if (bitmap2.capacity() < bitmap.capacity()) {
+                    bitmap2._intersect_no_size_update(bitmap);
+                    bitmap := bitmap2;
+                } else {
+                    bitmap._intersect_no_size_update(bitmap2);
+                };
+            };
+            case (null) break merging_bitmaps;
+        };
+
+        if (not only_one) {
+            bitmap._update_size();
+        };
+
+        bitmap;
+
+    };
+
     /// A data structure for fast set operations on a set of integers each represented by a bit.
     public class BitMap(init_size : Nat) {
 
@@ -200,6 +256,69 @@ module {
                     val;
                 },
             );
+        };
+
+        public func _update_size() {
+            filled_positions := 0;
+
+            for (i in Iter.range(0, words.size() - 1)) {
+                filled_positions += Nat64.toNat(Nat64.bitcountNonZero(words.get(i)));
+            };
+
+        };
+
+        public func _union_no_size_update(other : BitMap) {
+            if (other.capacity() > capacity()) {
+                grow(other.capacity());
+            };
+
+            let start = 0;
+            let end = Nat.min(capacity(), other.capacity()) / WORD_SIZE;
+
+            if (capacity() == 0) return;
+
+            var i = 0;
+            while (i < end) {
+                let other_word = other.getWord(i);
+                let curr_word = words.get(i);
+
+                let new_word = curr_word | other_word;
+
+                words.put(i, new_word);
+
+                i += 1;
+            };
+
+        };
+
+        public func _intersect_no_size_update(other : BitMap) {
+            if (other.capacity() < capacity()) {
+                // it's assumed that the bits at the positions that are not present in the other bitmap are false or empty
+                // since they are all empty and it's an intersection, we can set all the bits in the extra words to 0
+
+                let start = other.capacity() / WORD_SIZE;
+                let end = capacity() / WORD_SIZE;
+
+                for (i in Iter.range(start, end - 1)) {
+                    words.put(i, 0);
+                };
+
+            };
+
+            if (capacity() == 0) return;
+
+            let start = 0;
+            let end = Nat.min(capacity(), other.capacity()) / WORD_SIZE;
+
+            for (i in Iter.range(start, end - 1)) {
+                let other_word = other.getWord(i);
+                let curr_word = words.get(i);
+                let new_word = curr_word & other_word;
+
+                words.put(i, new_word);
+
+            };
+
         };
 
     };

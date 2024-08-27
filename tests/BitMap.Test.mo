@@ -103,3 +103,44 @@ test(
         assert bitmap.get(324) == true;
     },
 );
+
+test(
+    "multiUnion",
+    func() {
+        let bitmap1 = BitMap.BitMap(8);
+        bitmap1.set(1, true);
+
+        let bitmap2 = BitMap.BitMap(8);
+        bitmap2.set(64, true);
+
+        let bitmap3 = BitMap.BitMap(8);
+        bitmap3.set(128, true);
+
+        let bitmap = BitMap.multiUnion([bitmap1, bitmap2, bitmap3].vals()); // the returned bitmap is one of the input bitmaps
+
+        assert bitmap.toArray() == [1, 64, 128];
+
+    },
+);
+
+test(
+    "multiIntersect",
+    func() {
+        let bitmap1 = BitMap.BitMap(8);
+        bitmap1.set(1, true);
+        bitmap1.set(64, true);
+        bitmap1.set(128, true);
+
+        let bitmap2 = BitMap.BitMap(8);
+        bitmap2.set(64, true);
+        bitmap2.set(128, true);
+
+        let bitmap3 = BitMap.BitMap(8);
+        bitmap3.set(128, true);
+        bitmap3.set(256, true);
+
+        let bitmap = BitMap.multiIntersect([bitmap1, bitmap2, bitmap3].vals()); // the returned bitmap is one of the input bitmaps
+
+        assert bitmap.toArray() == [128];
+    },
+);
