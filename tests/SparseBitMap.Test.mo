@@ -1,12 +1,12 @@
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import { test; suite; skip } "mo:test";
-
-import BitMap "../src";
 import Fuzz "mo:fuzz";
 import Buffer "mo:base/Buffer";
 import Nat "mo:base/Nat";
 import Set "mo:map/Set";
+
+import SparseBitMap "../src/SparseBitMap";
 
 let fuzz = Fuzz.Fuzz();
 
@@ -53,21 +53,21 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     Buffer.removeDuplicates(inputs[1], Nat.compare);
     Buffer.removeDuplicates(inputs[2], Nat.compare);
 
-    let bitmaps = Buffer.Buffer<BitMap.BitMap>(3);
+    let sparse_bitmaps = Buffer.Buffer<SparseBitMap.SparseBitMap>(3);
 
     test(
         "add()",
         func() {
-            let bitmap = BitMap.BitMap(8);
+            let sparse_bitmap = SparseBitMap.SparseBitMap();
 
             for (n in inputs[0].vals()) {
-                bitmap.set(n, true);
-                assert bitmap.get(n) == true;
+                sparse_bitmap.add(n);
+                assert sparse_bitmap.get(n) == true;
             };
 
-            assert bitmap.size() == inputs[0].size();
+            assert sparse_bitmap.size() == inputs[0].size();
 
-            bitmaps.add(bitmap);
+            sparse_bitmaps.add(sparse_bitmap);
 
         },
     );
@@ -75,35 +75,35 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "addAll()",
         func() {
-            let bitmap = BitMap.BitMap(8);
+            let sparse_bitmap = SparseBitMap.SparseBitMap();
+
+            sparse_bitmap.addAll(inputs[1].vals());
+
+            assert sparse_bitmap.size() == inputs[1].size();
 
             for (n in inputs[1].vals()) {
-                bitmap.set(n, true);
+                assert sparse_bitmap.get(n) == true;
             };
 
-            assert bitmap.size() == inputs[1].size();
-
-            for (n in inputs[1].vals()) {
-                assert bitmap.get(n) == true;
-            };
-
-            bitmaps.add(bitmap);
+            sparse_bitmaps.add(sparse_bitmap);
 
         },
     );
 
     test(
-        "fromArray()",
+        "fromIter()",
         func() {
-            let bitmap = BitMap.fromArray(Buffer.toArray(inputs[2]));
+            let sparse_bitmap = SparseBitMap.fromIter(inputs[2].vals());
+            Debug.print(debug_show sparse_bitmap.size());
+            Debug.print(debug_show inputs[2].size());
 
-            assert bitmap.size() == inputs[2].size();
+            assert sparse_bitmap.size() == inputs[2].size();
 
             for (n in inputs[2].vals()) {
-                assert bitmap.get(n) == true;
+                assert sparse_bitmap.get(n) == true;
             };
 
-            bitmaps.add(bitmap);
+            sparse_bitmaps.add(sparse_bitmap);
 
         },
     );
@@ -111,17 +111,17 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "clone()",
         func() {
-            let bitmap = bitmaps.get(0).clone();
+            let sparse_bitmap = sparse_bitmaps.get(0).clone();
 
-            assert bitmap.size() == inputs[0].size();
-            assert bitmaps.get(0).size() == inputs[0].size();
+            assert sparse_bitmap.size() == inputs[0].size();
+            assert sparse_bitmaps.get(0).size() == inputs[0].size();
 
             for (n in inputs[0].vals()) {
-                assert bitmap.get(n) == true;
+                assert sparse_bitmap.get(n) == true;
             };
 
             for (n in inputs[0].vals()) {
-                assert bitmaps.get(0).get(n) == true;
+                assert sparse_bitmaps.get(0).get(n) == true;
             };
         },
     );
@@ -129,12 +129,12 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "vals()",
         func() {
-            let bitmap = bitmaps.get(0).clone();
+            let sparse_bitmap = sparse_bitmaps.get(0).clone();
 
-            assert bitmap.size() == inputs[0].size();
+            assert sparse_bitmap.size() == inputs[0].size();
 
             for (n in inputs[0].vals()) {
-                assert bitmap.get(n) == true;
+                assert sparse_bitmap.get(n) == true;
             };
         },
     );
@@ -142,15 +142,15 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "union()",
         func() {
-            let bitmap1 = bitmaps.get(0).clone();
-            let bitmap2 = bitmaps.get(1);
-            let bitmap3 = bitmaps.get(2);
+            let sparse_bitmap1 = sparse_bitmaps.get(0).clone();
+            let sparse_bitmap2 = sparse_bitmaps.get(1);
+            let sparse_bitmap3 = sparse_bitmaps.get(2);
 
-            bitmap1.union(bitmap2);
-            bitmap1.union(bitmap3);
+            sparse_bitmap1.union(sparse_bitmap2);
+            sparse_bitmap1.union(sparse_bitmap3);
 
             for (n in Set.keys(fullset)) {
-                assert bitmap1.get(n) == true;
+                assert sparse_bitmap1.get(n) == true;
             };
 
         },
@@ -161,10 +161,10 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
         "multiUnion()",
         func() {
 
-            let bitmap = BitMap.multiUnion(bitmaps.vals());
+            let sparse_bitmap = SparseBitMap.multiUnion(sparse_bitmaps.vals());
 
             for (n in Set.keys(fullset)) {
-                assert bitmap.get(n) == true;
+                assert sparse_bitmap.get(n) == true;
             };
         },
     );
@@ -172,15 +172,17 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "intersect()",
         func() {
-            let bitmap1 = bitmaps.get(0).clone();
-            let bitmap2 = bitmaps.get(1);
-            let bitmap3 = bitmaps.get(2);
+            let sparse_bitmap1 = sparse_bitmaps.get(0).clone();
+            let sparse_bitmap2 = sparse_bitmaps.get(1);
+            let sparse_bitmap3 = sparse_bitmaps.get(2);
 
-            bitmap1.intersect(bitmap2);
-            bitmap1.intersect(bitmap3);
+            sparse_bitmap1.intersect(sparse_bitmap2);
+            sparse_bitmap1.intersect(sparse_bitmap3);
+
+            Debug.print(debug_show sparse_bitmap1.size());
 
             for (n in Set.keys(intersect_set)) {
-                assert bitmap1.get(n) == true;
+                assert sparse_bitmap1.get(n) == true;
             };
 
         },
@@ -190,24 +192,24 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
         "multiIntersect()",
         func() {
 
-            let bitmap = BitMap.multiIntersect(bitmaps.vals());
+            let sparse_bitmap = SparseBitMap.multiIntersect(sparse_bitmaps.vals());
 
             for (n in Set.keys(intersect_set)) {
-                assert bitmap.get(n) == true;
+                assert sparse_bitmap.get(n) == true;
             };
         },
     );
 };
 
 suite(
-    "BitMap: limit = 10_000, key_space = 30_000",
+    "SparseBitMap: limit = 10_000, key_space = 30_000",
     func() {
         run_tests(10_000, 30_000, { inputs; fullset; intersect_set });
     },
 );
 
 suite(
-    "BitMap: limit = 10_000, key_space = 500_000",
+    "SparseBitMap: limit = 10_000, key_space = 500_000",
     func() {
         run_tests(10_000, 500_000, { inputs; fullset; intersect_set });
     },

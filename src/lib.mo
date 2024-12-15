@@ -14,7 +14,7 @@ module {
     };
 
     public func fromIter(iter : Iter.Iter<Nat>) : BitMap {
-        let bitmap = BitMap(8);
+        let bitmap = BitMap(1024);
         for (n in iter) {
             bitmap.set(n, true);
         };
@@ -28,20 +28,17 @@ module {
 
     public func multiUnion(bitmaps : Iter.Iter<BitMap>) : BitMap {
 
-        let ?first = bitmaps.next() else Debug.trap("multiUnion: Empty iterator");
+        let bitmap = switch (bitmaps.next()) {
+            case (?first) { first.clone() };
+            case (null) { return BitMap(0) };
+        };
 
-        var bitmap = first;
         var only_one = true;
 
         label merging_bitmaps loop switch (bitmaps.next()) {
             case (?bitmap2) {
                 only_one := false;
-                if (bitmap2.capacity() > bitmap.capacity()) {
-                    bitmap2._union_no_size_update(bitmap);
-                    bitmap := bitmap2;
-                } else {
-                    bitmap._union_no_size_update(bitmap2);
-                };
+                bitmap._union_no_size_update(bitmap2);
             };
             case (null) break merging_bitmaps;
         };
@@ -56,20 +53,17 @@ module {
 
     public func multiIntersect(bitmaps : Iter.Iter<BitMap>) : BitMap {
 
-        let ?first = bitmaps.next() else Debug.trap("multiIntersect: Empty iterator");
+        let bitmap = switch (bitmaps.next()) {
+            case (?first) { first.clone() };
+            case (null) { return BitMap(0) };
+        };
 
-        var bitmap = first;
         var only_one = true;
 
         label merging_bitmaps loop switch (bitmaps.next()) {
             case (?bitmap2) {
                 only_one := false;
-                if (bitmap2.capacity() < bitmap.capacity()) {
-                    bitmap2._intersect_no_size_update(bitmap);
-                    bitmap := bitmap2;
-                } else {
-                    bitmap._intersect_no_size_update(bitmap2);
-                };
+                bitmap._intersect_no_size_update(bitmap2);
             };
             case (null) break merging_bitmaps;
         };
@@ -83,7 +77,7 @@ module {
     };
 
     /// A data structure for fast set operations on a set of integers each represented by a bit.
-    public class BitMap(init_size : Nat) {
+    public class BitMap(init_size : Nat) = self {
 
         let init_words : Nat = (init_size + WORD_SIZE - 1) / WORD_SIZE; // div_ceiling
 
@@ -98,8 +92,14 @@ module {
 
         var filled_positions = 0;
 
-        public func size() : Nat = filled_positions; // - not reliable yet, as it needs to be updated for each change during an intersection or union
+        public func size() : Nat = filled_positions; // - not reliable yet, needs further testing as it needs to be updated for each change during an intersection or union
         public func capacity() : Nat = words.size() * WORD_SIZE;
+
+        public func clone() : BitMap {
+            let bitmap = BitMap(capacity());
+            bitmap.union(self);
+            bitmap;
+        };
 
         func grow(new_size : Nat) {
             let additional_space_needed = new_size - capacity();
