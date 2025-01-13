@@ -76,6 +76,23 @@ module {
 
     };
 
+    // ! fails on more than 2 bitmaps - might need to merge each word at the same index in parallel
+    // public func multiDifference(bitmaps : Iter.Iter<BitMap>) : BitMap {
+    //     let bitmap = switch (bitmaps.next()) {
+    //         case (?first) { first.clone() };
+    //         case (null) { return BitMap(0) };
+    //     };
+
+    //     label merging_bitmaps loop switch (bitmaps.next()) {
+    //         case (?bitmap2) {
+    //             bitmap.difference(bitmap2);
+    //         };
+    //         case (null) break merging_bitmaps;
+    //     };
+
+    //     bitmap;
+    // };
+
     /// A data structure for fast set operations on a set of integers each represented by a bit.
     public class BitMap(init_size : Nat) = self {
 
@@ -213,6 +230,38 @@ module {
                 filled_positions += Nat64.toNat(Nat64.bitcountNonZero(new_word));
             };
 
+        };
+
+        public func difference(other : BitMap) {
+            if (capacity() == 0) return;
+
+            let start = 0;
+            let end = Nat.min(capacity(), other.capacity()) / WORD_SIZE;
+
+            filled_positions := 0;
+
+            for (i in Iter.range(start, end - 1)) {
+                let other_word = other.getWord(i);
+                let curr_word = words.get(i);
+
+                let new_word = curr_word ^ other_word;
+
+                words.put(i, new_word);
+
+                filled_positions += Nat64.toNat(Nat64.bitcountNonZero(new_word));
+            };
+
+            // Handle remaining words if the other bitmap is larger
+            if (capacity() < other.capacity()) {
+                let start = capacity() / WORD_SIZE;
+                let end = other.capacity() / WORD_SIZE;
+
+                for (i in Iter.range(start, end - 1)) {
+                    let other_word = other.getWord(i);
+                    words.put(i, other_word);
+                    filled_positions += Nat64.toNat(Nat64.bitcountNonZero(other_word));
+                };
+            };
         };
 
         public func vals() : Iter.Iter<Nat> {

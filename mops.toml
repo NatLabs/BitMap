@@ -6,16 +6,10 @@ augmented-btrees = "0.5.2"
 
 [package]
 name = "bit-map"
-version = "0.1.1"
+version = "0.1.2"
 description = "A data structure for fast set operations on a set of integers each represented by a bit."
 repository = "https://github.com/NatLabs/BitMap"
-keywords = [
-  "set",
-  "bitmap",
-  "sparse",
-  "roaring-bitmap",
-  "data-structure"
-]
+keywords = ["set", "bitmap", "data-structure"]
 license = "MIT"
 
 [dev-dependencies]

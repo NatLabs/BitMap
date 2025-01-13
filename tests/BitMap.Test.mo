@@ -197,6 +197,83 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
             };
         },
     );
+
+    test(
+        "difference()",
+        func() {
+            let bitmap1 = bitmaps.get(0);
+            let bitmap2 = bitmaps.get(1);
+
+            let bitmap_difference = bitmap1.clone();
+
+            bitmap_difference.difference(bitmap2);
+
+            for (n in bitmap1.vals()) {
+                if (bitmap2.get(n)) {
+                    assert bitmap_difference.get(n) == false;
+                } else {
+                    assert bitmap_difference.get(n) == true;
+                };
+            };
+
+            for (n in bitmap2.vals()) {
+                if (bitmap1.get(n)) {
+                    assert bitmap_difference.get(n) == false;
+                } else {
+                    assert bitmap_difference.get(n) == true;
+                };
+            };
+
+            for (n in bitmap_difference.vals()) {
+                if (bitmap1.get(n) and bitmap2.get(n)) {
+                    assert false;
+                };
+            };
+
+        },
+    );
+
+    // test(
+    //     "multiDifference()",
+    //     func() {
+    //         let bitmap = BitMap.multiDifference(bitmaps.vals());
+
+    //         let bitmap1 = bitmaps.get(0);
+    //         let bitmap2 = bitmaps.get(1);
+    //         let bitmap3 = bitmaps.get(2);
+
+    //         // for (n in bitmap.vals()) {
+    //         //     if (bitmap1.get(n) and bitmap2.get(n) and bitmap3.get(n)) {
+    //         //         assert false;
+    //         //     };
+    //         // };
+
+    //         for (n in bitmap1.vals()) {
+    //             if (bitmap2.get(n) or bitmap3.get(n)) {
+    //                 assert bitmap.get(n) == false;
+    //             } else {
+    //                 assert bitmap.get(n) == true;
+    //             };
+    //         };
+
+    //         for (n in bitmap2.vals()) {
+    //             if (bitmap1.get(n) or bitmap3.get(n)) {
+    //                 assert bitmap.get(n) == false;
+    //             } else {
+    //                 assert bitmap.get(n) == true;
+    //             };
+    //         };
+
+    //         for (n in bitmap3.vals()) {
+    //             if (bitmap1.get(n) or bitmap2.get(n)) {
+    //                 assert bitmap.get(n) == false;
+    //             } else {
+    //                 assert bitmap.get(n) == true;
+    //             };
+    //         };
+
+    //     },
+    // );
 };
 
 suite(
