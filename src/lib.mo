@@ -258,7 +258,7 @@ module {
 
                 for (i in Iter.range(start, end - 1)) {
                     let other_word = other.getWord(i);
-                    words.put(i, other_word);
+                    words.add(other_word);
                     filled_positions += Nat64.toNat(Nat64.bitcountNonZero(other_word));
                 };
             };
