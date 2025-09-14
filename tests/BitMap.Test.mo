@@ -234,6 +234,29 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     );
 
     // test(
+    //     "difference() - 2nd bitmap is larger than 1st",
+    //     func() {
+    //         let bitmap1 = BitMap.BitMap(8);
+    //         for (n in [1, 2, 3, 4, 5].vals()) {
+    //             bitmap1.set(n, true);
+    //         };
+
+    //         let bitmap2 = BitMap.BitMap(8);
+
+    //         for (n in [1, 2, 3, 4, 5, 64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
+    //             bitmap2.set(n, true);
+    //         };
+
+    //         bitmap1.difference(bitmap2);
+
+    //         for (n in [64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
+    //             assert bitmap1.get(n) == false;
+    //         };
+
+    //     },
+    // );
+
+    // test(
     //     "multiDifference()",
     //     func() {
     //         let bitmap = BitMap.multiDifference(bitmaps.vals());
