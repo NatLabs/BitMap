@@ -1,15 +1,15 @@
 import BitMap "lib";
-import Nat16 "mo:base/Nat16";
-import Nat32 "mo:base/Nat32";
-import Iter "mo:base/Iter";
-import Debug "mo:base/Debug";
-import Buffer "mo:base/Buffer";
-import Order "mo:base/Order";
-import Nat "mo:base/Nat";
-import Array "mo:base/Array";
+import Nat16 "mo:base@0.16.0/Nat16";
+import Nat32 "mo:base@0.16.0/Nat32";
+import Iter "mo:base@0.16.0/Iter";
+import Debug "mo:base@0.16.0/Debug";
+import Buffer "mo:base@0.16.0/Buffer";
+import Order "mo:base@0.16.0/Order";
+import Nat "mo:base@0.16.0/Nat";
+import Array "mo:base@0.16.0/Array";
 
-import Itertools "mo:itertools/Iter";
-import Map "mo:map/Map";
+import Itertools "mo:itertools@0.2.2/Iter";
+import Map "mo:map@9.0.1/Map";
 
 /// A sparse bitmap that implements the roaring bitmap compression scheme.
 /// This implementation is limited to 32-bit Nat values and uses a stable structure.

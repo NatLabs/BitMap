@@ -1,8 +1,8 @@
-import Iter "mo:base/Iter";
-import Debug "mo:base/Debug";
-import Prelude "mo:base/Prelude";
-import Buffer "mo:base/Buffer";
-import Array "mo:base/Array";
+import Iter "mo:base@0.16.0/Iter";
+import Debug "mo:base@0.16.0/Debug";
+import Prelude "mo:base@0.16.0/Prelude";
+import Buffer "mo:base@0.16.0/Buffer";
+import Array "mo:base@0.16.0/Array";
 
 import Bench "mo:bench";
 import Fuzz "mo:fuzz";

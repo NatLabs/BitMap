@@ -1,11 +1,11 @@
-import Iter "mo:base/Iter";
+import Iter "mo:base@0.16.0/Iter";
 import { test; suite } "mo:test";
 
 import SparseBitMap32 "../src/SparseBitMap32";
 import Fuzz "mo:fuzz";
-import Buffer "mo:base/Buffer";
-import Nat "mo:base/Nat";
-import Set "mo:map/Set";
+import Buffer "mo:base@0.16.0/Buffer";
+import Nat "mo:base@0.16.0/Nat";
+import Set "mo:map@9.0.1/Set";
 
 let fuzz = Fuzz.Fuzz();
 

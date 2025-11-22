@@ -14,10 +14,11 @@ mops add bit-map
 
 ## Usage
 
-### BitMap (Functional API)
 
 ```motoko
 import BitMap "mo:bit-map";
+import SparseBitMap32 "mo:bit-map/SparseBitMap32";
+import SparseBitMap64 "mo:bit-map/SparseBitMap64";
 
 let bitmap1 = BitMap.new(8); // 8 is the initial capacity
 

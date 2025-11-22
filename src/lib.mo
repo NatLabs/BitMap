@@ -1,10 +1,10 @@
-import Vector "mo:vector";
-import Array "mo:base/Array";
-import Nat "mo:base/Nat";
-import Nat64 "mo:base/Nat64";
-import Int "mo:base/Int";
-import Iter "mo:base/Iter";
-import Debug "mo:base/Debug";
+import Vector "mo:vector@0.4.2";
+import Array "mo:base@0.16.0/Array";
+import Nat "mo:base@0.16.0/Nat";
+import Nat64 "mo:base@0.16.0/Nat64";
+import Int "mo:base@0.16.0/Int";
+import Iter "mo:base@0.16.0/Iter";
+import Debug "mo:base@0.16.0/Debug";
 
 module {
     public let WORD_SIZE : Nat = 64;
@@ -90,7 +90,7 @@ module {
         if (row < current_words) return;
 
         // Grow exponentially to amortize the cost of resizing
-        // This matches what mo:vector does internally
+        // This matches what mo:vector@0.4.2 does internally
         let min_words_needed = row + 1;
         let exponential_growth = current_words * 2;
         let new_capacity = Nat.max(min_words_needed, exponential_growth);
