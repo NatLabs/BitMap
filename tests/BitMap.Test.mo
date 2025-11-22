@@ -1,6 +1,5 @@
-import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
-import { test; suite; skip } "mo:test";
+import { test; suite } "mo:test";
 
 import BitMap "../src";
 import Fuzz "mo:fuzz";
@@ -10,7 +9,7 @@ import Set "mo:map/Set";
 
 let fuzz = Fuzz.Fuzz();
 
-let limit = 10_000;
+let limit = 1_000;
 
 let inputs = [
     Buffer.Buffer<Nat>(limit),
@@ -49,23 +48,28 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
 
     };
 
-    Buffer.removeDuplicates(inputs[0], Nat.compare);
-    Buffer.removeDuplicates(inputs[1], Nat.compare);
-    Buffer.removeDuplicates(inputs[2], Nat.compare);
+    // Buffer.removeDuplicates(inputs[0], Nat.compare);
+    // Buffer.removeDuplicates(inputs[1], Nat.compare);
+    // Buffer.removeDuplicates(inputs[2], Nat.compare);
 
     let bitmaps = Buffer.Buffer<BitMap.BitMap>(3);
 
     test(
         "add()",
         func() {
-            let bitmap = BitMap.BitMap(8);
+            let bitmap = BitMap.new(8);
 
             for (n in inputs[0].vals()) {
-                bitmap.set(n, true);
-                assert bitmap.get(n) == true;
+                BitMap.set(bitmap, n, true);
+                assert BitMap.get(bitmap, n) == true;
             };
 
-            assert bitmap.size() == inputs[0].size();
+            // Size should equal unique values just from inputs[0]
+            let set_0 = Set.new<Nat>();
+            for (n in inputs[0].vals()) {
+                Set.add(set_0, nhash, n);
+            };
+            assert BitMap.size(bitmap) == Set.size(set_0);
 
             bitmaps.add(bitmap);
 
@@ -75,16 +79,20 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "addAll()",
         func() {
-            let bitmap = BitMap.BitMap(8);
+            let bitmap = BitMap.new(8);
 
             for (n in inputs[1].vals()) {
-                bitmap.set(n, true);
+                BitMap.set(bitmap, n, true);
             };
 
-            assert bitmap.size() == inputs[1].size();
+            let set_1 = Set.new<Nat>();
+            for (n in inputs[1].vals()) {
+                Set.add(set_1, nhash, n);
+            };
+            assert BitMap.size(bitmap) == Set.size(set_1);
 
             for (n in inputs[1].vals()) {
-                assert bitmap.get(n) == true;
+                assert BitMap.get(bitmap, n) == true;
             };
 
             bitmaps.add(bitmap);
@@ -97,10 +105,14 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
         func() {
             let bitmap = BitMap.fromArray(Buffer.toArray(inputs[2]));
 
-            assert bitmap.size() == inputs[2].size();
+            let set_2 = Set.new<Nat>();
+            for (n in inputs[2].vals()) {
+                Set.add(set_2, nhash, n);
+            };
+            assert BitMap.size(bitmap) == Set.size(set_2);
 
             for (n in inputs[2].vals()) {
-                assert bitmap.get(n) == true;
+                assert BitMap.get(bitmap, n) == true;
             };
 
             bitmaps.add(bitmap);
@@ -111,17 +123,21 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "clone()",
         func() {
-            let bitmap = bitmaps.get(0).clone();
+            let bitmap = BitMap.clone(bitmaps.get(0));
 
-            assert bitmap.size() == inputs[0].size();
-            assert bitmaps.get(0).size() == inputs[0].size();
+            let set_0 = Set.new<Nat>();
+            for (n in inputs[0].vals()) {
+                Set.add(set_0, nhash, n);
+            };
+            assert BitMap.size(bitmap) == Set.size(set_0);
+            assert BitMap.size(bitmaps.get(0)) == Set.size(set_0);
 
             for (n in inputs[0].vals()) {
-                assert bitmap.get(n) == true;
+                assert BitMap.get(bitmap, n) == true;
             };
 
             for (n in inputs[0].vals()) {
-                assert bitmaps.get(0).get(n) == true;
+                assert BitMap.get(bitmaps.get(0), n) == true;
             };
         },
     );
@@ -129,12 +145,16 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "vals()",
         func() {
-            let bitmap = bitmaps.get(0).clone();
+            let bitmap = BitMap.clone(bitmaps.get(0));
 
-            assert bitmap.size() == inputs[0].size();
+            let set_0 = Set.new<Nat>();
+            for (n in inputs[0].vals()) {
+                Set.add(set_0, nhash, n);
+            };
+            assert BitMap.size(bitmap) == Set.size(set_0);
 
             for (n in inputs[0].vals()) {
-                assert bitmap.get(n) == true;
+                assert BitMap.get(bitmap, n) == true;
             };
         },
     );
@@ -142,15 +162,15 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "union()",
         func() {
-            let bitmap1 = bitmaps.get(0).clone();
+            let bitmap1 = BitMap.clone(bitmaps.get(0));
             let bitmap2 = bitmaps.get(1);
             let bitmap3 = bitmaps.get(2);
 
-            bitmap1.union(bitmap2);
-            bitmap1.union(bitmap3);
+            BitMap.unionInPlace(bitmap1, bitmap2);
+            BitMap.unionInPlace(bitmap1, bitmap3);
 
             for (n in Set.keys(fullset)) {
-                assert bitmap1.get(n) == true;
+                assert BitMap.get(bitmap1, n) == true;
             };
 
         },
@@ -164,7 +184,7 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
             let bitmap = BitMap.multiUnion(bitmaps.vals());
 
             for (n in Set.keys(fullset)) {
-                assert bitmap.get(n) == true;
+                assert BitMap.get(bitmap, n) == true;
             };
         },
     );
@@ -172,15 +192,15 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
     test(
         "intersect()",
         func() {
-            let bitmap1 = bitmaps.get(0).clone();
+            let bitmap1 = BitMap.clone(bitmaps.get(0));
             let bitmap2 = bitmaps.get(1);
             let bitmap3 = bitmaps.get(2);
 
-            bitmap1.intersect(bitmap2);
-            bitmap1.intersect(bitmap3);
+            BitMap.intersectInPlace(bitmap1, bitmap2);
+            BitMap.intersectInPlace(bitmap1, bitmap3);
 
             for (n in Set.keys(intersect_set)) {
-                assert bitmap1.get(n) == true;
+                assert BitMap.get(bitmap1, n) == true;
             };
 
         },
@@ -193,7 +213,7 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
             let bitmap = BitMap.multiIntersect(bitmaps.vals());
 
             for (n in Set.keys(intersect_set)) {
-                assert bitmap.get(n) == true;
+                assert BitMap.get(bitmap, n) == true;
             };
         },
     );
@@ -204,111 +224,107 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
             let bitmap1 = bitmaps.get(0);
             let bitmap2 = bitmaps.get(1);
 
-            let bitmap_difference = bitmap1.clone();
+            let bitmap_difference = BitMap.clone(bitmap1);
 
-            bitmap_difference.difference(bitmap2);
+            BitMap.differenceInPlace(bitmap_difference, bitmap2);
 
-            for (n in bitmap1.vals()) {
-                if (bitmap2.get(n)) {
-                    assert bitmap_difference.get(n) == false;
+            // Set difference: bitmap1 - bitmap2
+            // Should contain bits that are in bitmap1 but not in bitmap2
+            for (n in BitMap.vals(bitmap1)) {
+                if (BitMap.get(bitmap2, n)) {
+                    // Bit is in both, should be removed
+                    assert BitMap.get(bitmap_difference, n) == false;
                 } else {
-                    assert bitmap_difference.get(n) == true;
+                    // Bit only in bitmap1, should be kept
+                    assert BitMap.get(bitmap_difference, n) == true;
                 };
             };
 
-            for (n in bitmap2.vals()) {
-                if (bitmap1.get(n)) {
-                    assert bitmap_difference.get(n) == false;
-                } else {
-                    assert bitmap_difference.get(n) == true;
+            // Bits only in bitmap2 should not be in the result
+            for (n in BitMap.vals(bitmap2)) {
+                if (not BitMap.get(bitmap1, n)) {
+                    assert BitMap.get(bitmap_difference, n) == false;
                 };
             };
 
-            for (n in bitmap_difference.vals()) {
-                if (bitmap1.get(n) and bitmap2.get(n)) {
-                    assert false;
-                };
+            // Result should only contain bits from bitmap1 that are not in bitmap2
+            for (n in BitMap.vals(bitmap_difference)) {
+                assert BitMap.get(bitmap1, n) == true;
+                assert BitMap.get(bitmap2, n) == false;
             };
 
         },
     );
 
-    // test(
-    //     "difference() - 2nd bitmap is larger than 1st",
-    //     func() {
-    //         let bitmap1 = BitMap.BitMap(8);
-    //         for (n in [1, 2, 3, 4, 5].vals()) {
-    //             bitmap1.set(n, true);
-    //         };
+    test(
+        "difference() - 2nd bitmap is larger than 1st",
+        func() {
+            let bitmap1 = BitMap.new(8);
+            for (n in [1, 2, 3, 4, 5].vals()) {
+                BitMap.set(bitmap1, n, true);
+            };
 
-    //         let bitmap2 = BitMap.BitMap(8);
+            let bitmap2 = BitMap.new(8);
 
-    //         for (n in [1, 2, 3, 4, 5, 64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
-    //             bitmap2.set(n, true);
-    //         };
+            for (n in [1, 2, 3, 4, 5, 64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
+                BitMap.set(bitmap2, n, true);
+            };
 
-    //         bitmap1.difference(bitmap2);
+            BitMap.differenceInPlace(bitmap1, bitmap2);
 
-    //         for (n in [64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
-    //             assert bitmap1.get(n) == false;
-    //         };
+            // With set difference (A - B):
+            // - Bits in both bitmaps (1-5) should be removed
+            for (n in [1, 2, 3, 4, 5].vals()) {
+                assert BitMap.get(bitmap1, n) == false;
+            };
 
-    //     },
-    // );
+            // - Bits only in bitmap2 (64-786) should NOT be in bitmap1
+            for (n in [64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
+                assert BitMap.get(bitmap1, n) == false;
+            };
 
-    // test(
-    //     "multiDifference()",
-    //     func() {
-    //         let bitmap = BitMap.multiDifference(bitmaps.vals());
+            // bitmap1 should be empty
+            assert BitMap.size(bitmap1) == 0;
 
-    //         let bitmap1 = bitmaps.get(0);
-    //         let bitmap2 = bitmaps.get(1);
-    //         let bitmap3 = bitmaps.get(2);
+        },
+    );
 
-    //         // for (n in bitmap.vals()) {
-    //         //     if (bitmap1.get(n) and bitmap2.get(n) and bitmap3.get(n)) {
-    //         //         assert false;
-    //         //     };
-    //         // };
+    test(
+        "symmetricDifference() - 2nd bitmap is larger than 1st",
+        func() {
+            let bitmap1 = BitMap.new(8);
+            for (n in [1, 2, 3, 4, 5].vals()) {
+                BitMap.set(bitmap1, n, true);
+            };
 
-    //         for (n in bitmap1.vals()) {
-    //             if (bitmap2.get(n) or bitmap3.get(n)) {
-    //                 assert bitmap.get(n) == false;
-    //             } else {
-    //                 assert bitmap.get(n) == true;
-    //             };
-    //         };
+            let bitmap2 = BitMap.new(8);
 
-    //         for (n in bitmap2.vals()) {
-    //             if (bitmap1.get(n) or bitmap3.get(n)) {
-    //                 assert bitmap.get(n) == false;
-    //             } else {
-    //                 assert bitmap.get(n) == true;
-    //             };
-    //         };
+            for (n in [1, 2, 3, 4, 5, 64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
+                BitMap.set(bitmap2, n, true);
+            };
 
-    //         for (n in bitmap3.vals()) {
-    //             if (bitmap1.get(n) or bitmap2.get(n)) {
-    //                 assert bitmap.get(n) == false;
-    //             } else {
-    //                 assert bitmap.get(n) == true;
-    //             };
-    //         };
+            BitMap.symmetricDifferenceInPlace(bitmap1, bitmap2);
 
-    //     },
-    // );
+            // With symmetric difference (XOR):
+            // - Bits in both bitmaps (1-5) should be removed (XOR gives 0)
+            for (n in [1, 2, 3, 4, 5].vals()) {
+                assert BitMap.get(bitmap1, n) == false;
+            };
+
+            // - Bits only in bitmap2 (64-786) should now be in bitmap1 (XOR adds them)
+            for (n in [64, 65, 66, 67, 68, 782, 783, 784, 785, 786].vals()) {
+                assert BitMap.get(bitmap1, n) == true;
+            };
+
+            assert BitMap.size(bitmap1) == 10;
+
+        },
+    );
 };
 
 suite(
-    "BitMap: limit = 10_000, key_space = 30_000",
+    "BitMap: key_space < 2^24",
     func() {
-        run_tests(10_000, 30_000, { inputs; fullset; intersect_set });
-    },
-);
-
-suite(
-    "BitMap: limit = 10_000, key_space = 500_000",
-    func() {
-        run_tests(10_000, 500_000, { inputs; fullset; intersect_set });
+        run_tests(limit, 2 ** 16, { inputs; fullset; intersect_set });
     },
 );

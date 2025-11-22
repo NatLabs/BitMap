@@ -8,57 +8,71 @@ import Bench "mo:bench";
 import Fuzz "mo:fuzz";
 
 import BitMap "../src";
-import SparseBitMap "../src/SparseBitMap";
+import SparseBitMap32 "../src/SparseBitMap32";
+import SparseBitMap64 "../src/SparseBitMap64";
 
 module {
     public func init() : Bench.Bench {
         let bench = Bench.Bench();
 
-        bench.name("BitMap vs SparseBitMap benchmarks");
-        bench.description("Benchmarking the performance of union() with 1k ids");
+        bench.name("BitMap vs SparseBitMap32 vs SparseBitMap64 benchmarks");
+        bench.description("Benchmarking the performance of different bitmap implementations");
 
         bench.cols([
             "BitMap",
-            "SparseBitMap",
+            "SparseBitMap32",
+            "SparseBitMap64",
         ]);
 
         bench.rows([
-            "load 10k sequential ids",
+            "load 1M sequential ids",
 
-            "load 10k random ids in 100k key space",
-            "load 10k random ids in 1M key space",
-            "load 10k random ids in 10M key space",
+            "random ids in 24 bit key space: 10k",
+            "random ids in 24 bit key space: 100k",
+            "random ids in 24 bit key space: 1M",
 
-            "load 50k random ids in 100k key space",
-            "load 80k random ids in 100k key space",
+            "random ids in 27 bit key space: 10k",
+            "random ids in 27 bit key space: 100k",
+            "random ids in 27 bit key space: 1M",
 
-            // "load 100k random ids in 1M key space",
-            // "load 500k random ids in 1M key space",
-            // "load 800k random ids in 1M key space",
+            "random ids in 32 bit key space: 10k",
+            "random ids in 32 bit key space: 100k",
+            "random ids in 32 bit key space: 1M",
 
-            "union() of 3 BitMaps: 10k ids in 100k key space",
-            "multiUnion() of 3 BitMaps: 10k ids in 100k key space",
+            "random ids in 64 bit key space: 10k",
+            "random ids in 64 bit key space: 100k",
+            "random ids in 64 bit key space: 1M",
 
-            "union() of 3 BitMaps: 50k ids in 100k key space",
-            "multiUnion() of 3 BitMaps: 50k ids in 100k key space",
+            // "load 10k random ids in 64 bit key space",
+            // "load 10k random ids in 96 bit key space",
 
-            "union() of 3 BitMaps: 10k ids in 1M key space",
-            "multiUnion() of 3 BitMaps: 10k ids in 1M key space",
+            // "load 32 bit random ids in 64 bit key space",
+            // "load 500k random ids in 64 bit key space",
+            // "load 800k random ids in 64 bit key space",
 
-            "union() of 3 BitMaps: 80k ids in 100k key space",
-            "multiUnion() of 3 BitMaps: 80k ids in 100k key space",
+            // "union() of 3 BitMaps: 10k ids in 32 bit key space",
+            // "multiUnion() of 3 BitMaps: 10k ids in 32 bit key space",
 
-            "intersect() of 3 BitMaps: 10k ids in 100k key space",
-            "multiIntersect() of 3 BitMaps: 10k ids in 100k key space",
+            // "union() of 3 BitMaps: 50k ids in 32 bit key space",
+            // "multiUnion() of 3 BitMaps: 50k ids in 32 bit key space",
 
-            "intersect() of 3 BitMaps: 50k ids in 100k key space",
-            "multiIntersect() of 3 BitMaps: 50k ids in 100k key space",
+            // "union() of 3 BitMaps: 10k ids in 64 bit key space",
+            // "multiUnion() of 3 BitMaps: 10k ids in 64 bit key space",
 
-            "intersect() of 3 BitMaps: 80k ids in 100k key space",
-            "multiIntersect() of 3 BitMaps: 80k ids in 100k key space",
+            // "union() of 3 BitMaps: 80k ids in 32 bit key space",
+            // "multiUnion() of 3 BitMaps: 80k ids in 32 bit key space",
 
-            "intersect() of 3 BitMaps: 10k ids in 1M key space",
-            "multiIntersect() of 3 BitMaps: 10k ids in 1M key space",
+            // "intersect() of 3 BitMaps: 10k ids in 32 bit key space",
+            // "multiIntersect() of 3 BitMaps: 10k ids in 32 bit key space",
+
+            // "intersect() of 3 BitMaps: 50k ids in 32 bit key space",
+            // "multiIntersect() of 3 BitMaps: 50k ids in 32 bit key space",
+
+            // "intersect() of 3 BitMaps: 80k ids in 32 bit key space",
+            // "multiIntersect() of 3 BitMaps: 80k ids in 32 bit key space",
+
+            // "intersect() of 3 BitMaps: 10k ids in 64 bit key space",
+            // "multiIntersect() of 3 BitMaps: 10k ids in 64 bit key space",
 
         ]);
 
@@ -83,424 +97,634 @@ module {
             );
         };
 
+        func random_nats_iter(size : Nat, start : Nat, end : Nat) : Iter.Iter<Nat> {
+
+            Iter.map(
+                Iter.range(0, size),
+                func(i : Nat) : Nat {
+                    fuzz.nat.randomRange(start, end);
+                },
+            );
+        };
+
         let limit = 10_000;
 
-        let random_10k_in_100k_key_space_1 = random_nats(limit, 0, 100_000, null);
-        let random_10k_in_100k_key_space_2 = random_nats(limit, 0, 100_000, null);
-        let random_10k_in_100k_key_space_3 = random_nats(limit, 0, 100_000, null);
+        let sequential_ids = 1_000_000;
 
-        let BitMaps_10k_in_100k_key_space = [
-            BitMap.fromIter(random_10k_in_100k_key_space_1.vals()),
-            BitMap.fromIter(random_10k_in_100k_key_space_2.vals()),
-            BitMap.fromIter(random_10k_in_100k_key_space_3.vals()),
-        ];
+        let random_ids_in_24_bit_key_space_1 = 10_000;
+        let random_ids_in_24_bit_key_space_2 = 100_000;
+        let random_ids_in_24_bit_key_space_3 = 1_000_000;
 
-        let random_50k_in_100k_key_space_1 = random_nats(50_000, 0, 100_000, null);
-        let random_50k_in_100k_key_space_2 = random_nats(50_000, 0, 100_000, null);
-        let random_50k_in_100k_key_space_3 = random_nats(50_000, 0, 100_000, null);
+        let random_ids_in_27_bit_key_space_1 = 10_000;
+        let random_ids_in_27_bit_key_space_2 = 100_000;
+        let random_ids_in_27_bit_key_space_3 = 1_000_000;
 
-        let BitMaps_50k_in_100k_key_space = [
-            BitMap.fromIter(random_50k_in_100k_key_space_1.vals()),
-            BitMap.fromIter(random_50k_in_100k_key_space_2.vals()),
-            BitMap.fromIter(random_50k_in_100k_key_space_3.vals()),
-        ];
+        let random_ids_in_32_bit_key_space_1 = 10_000;
+        let random_ids_in_32_bit_key_space_2 = 100_000;
+        let random_ids_in_32_bit_key_space_3 = 1_000_000;
 
-        let random_80k_in_100k_key_space_1 = random_nats(80_000, 0, 100_000, null);
-        let random_80k_in_100k_key_space_2 = random_nats(80_000, 0, 100_000, null);
-        let random_80k_in_100k_key_space_3 = random_nats(80_000, 0, 100_000, null);
+        let random_ids_in_64_bit_key_space_1 = 10_000;
+        let random_ids_in_64_bit_key_space_2 = 100_000;
+        let random_ids_in_64_bit_key_space_3 = 1_000_000;
 
-        let BitMaps_80k_in_100k_key_space = [
-            BitMap.fromIter(random_80k_in_100k_key_space_1.vals()),
-            BitMap.fromIter(random_80k_in_100k_key_space_2.vals()),
-            BitMap.fromIter(random_80k_in_100k_key_space_3.vals()),
-        ];
+        // let random_10k_in_32_bit_key_space_2 = random_nats(limit, 0, (2 ** 32), null);
+        // let random_10k_in_32_bit_key_space_3 = random_nats(limit, 0, (2 ** 32), null);
 
-        let random_10k_in_1M_key_space_1 = random_nats(limit, 0, 1_000_000, null);
-        let random_10k_in_1M_key_space_2 = random_nats(limit, 0, 1_000_000, null);
-        let random_10k_in_1M_key_space_3 = random_nats(limit, 0, 1_000_000, null);
+        // let BitMaps_10k_in_32_bit_key_space = [
+        //     BitMap.fromIter(random_ids_in_32_bit_key_space_1.vals()),
+        //     BitMap.fromIter(random_10k_in_32_bit_key_space_2.vals()),
+        //     BitMap.fromIter(random_10k_in_32_bit_key_space_3.vals()),
+        // ];
 
-        let BitMaps_10k_in_1M_key_space = [
-            BitMap.fromIter(random_10k_in_1M_key_space_1.vals()),
-            BitMap.fromIter(random_10k_in_1M_key_space_2.vals()),
-            BitMap.fromIter(random_10k_in_1M_key_space_3.vals()),
-        ];
+        // let random_50k_in_32_bit_key_space_2 = random_nats(50_000, 0, (2 ** 32), null);
+        // let random_50k_in_32_bit_key_space_3 = random_nats(50_000, 0, (2 ** 32), null);
 
-        let random_10k_in_10M_key_space = random_nats(limit, 0, 10_000_000, null);
+        // let BitMaps_50k_in_32_bit_key_space = [
+        //     BitMap.fromIter(random_100k_in_32_bit_key_space_1.vals()),
+        //     BitMap.fromIter(random_50k_in_32_bit_key_space_2.vals()),
+        //     BitMap.fromIter(random_50k_in_32_bit_key_space_3.vals()),
+        // ];
 
-        // let random_100k_in_1M_key_space = random_nats(100_000, 0, 1_000_000, ?random_10k_in_1M_key_space_1);
-        // let random_500k_in_1M_key_space = random_nats(500_000, 0, 1_000_000, ?random_100k_in_1M_key_space);
-        // let random_800k_in_1M_key_space = random_nats(800_000, 0, 1_000_000, ?random_500k_in_1M_key_space);
+        // let random_80k_in_32_bit_key_space_2 = random_nats(80_000, 0, (2 ** 32), null);
+        // let random_80k_in_32_bit_key_space_3 = random_nats(80_000, 0, (2 ** 32), null);
 
-        let SparseBitMaps_10k_in_100k_key_space = [
-            SparseBitMap.fromIter(random_10k_in_100k_key_space_1.vals()),
-            SparseBitMap.fromIter(random_10k_in_100k_key_space_2.vals()),
-            SparseBitMap.fromIter(random_10k_in_100k_key_space_3.vals()),
-        ];
+        // let BitMaps_80k_in_32_bit_key_space = [
+        //     BitMap.fromIter(random_1M_in_32_bit_key_space_1.vals()),
+        //     BitMap.fromIter(random_80k_in_32_bit_key_space_2.vals()),
+        //     BitMap.fromIter(random_80k_in_32_bit_key_space_3.vals()),
+        // ];
 
-        let SparseBitMaps_50k_in_100k_key_space = [
-            SparseBitMap.fromIter(random_50k_in_100k_key_space_1.vals()),
-            SparseBitMap.fromIter(random_50k_in_100k_key_space_2.vals()),
-            SparseBitMap.fromIter(random_50k_in_100k_key_space_3.vals()),
-        ];
+        // let random_10k_in_64_bit_key_space_1 = random_nats(limit, 0, (2 ** 64), null);
+        // let random_10k_in_64_bit_key_space_2 = random_nats(limit, 0, (2 ** 64), null);
+        // let random_10k_in_64_bit_key_space_3 = random_nats(limit, 0, (2 ** 64), null);
 
-        let SparseBitMaps_80k_in_100k_key_space = [
-            SparseBitMap.fromIter(random_80k_in_100k_key_space_1.vals()),
-            SparseBitMap.fromIter(random_80k_in_100k_key_space_2.vals()),
-            SparseBitMap.fromIter(random_80k_in_100k_key_space_3.vals()),
-        ];
+        // let BitMaps_10k_in_64_bit_key_space = [
+        //     BitMap.fromIter(random_10k_in_64_bit_key_space_1.vals()),
+        //     BitMap.fromIter(random_10k_in_64_bit_key_space_2.vals()),
+        //     BitMap.fromIter(random_10k_in_64_bit_key_space_3.vals()),
+        // ];
 
-        let SparseBitMaps_10k_in_1M_key_space = [
-            SparseBitMap.fromIter(random_10k_in_1M_key_space_1.vals()),
-            SparseBitMap.fromIter(random_10k_in_1M_key_space_2.vals()),
-            SparseBitMap.fromIter(random_10k_in_1M_key_space_3.vals()),
-        ];
+        // let random_10k_in_96_bit_key_space = random_nats(limit, 0, (2 ** 96), null);
+
+        // let random_32_bit_in_64_bit_key_space = random_nats((2 ** 32), 0, (2 ** 64), ?random_10k_in_64_bit_key_space_1);
+        // let random_500k_in_64_bit_key_space = random_nats(500_000, 0, (2 ** 64), ?random_32_bit_in_64_bit_key_space);
+        // let random_800k_in_64_bit_key_space = random_nats(800_000, 0, (2 ** 64), ?random_500k_in_64_bit_key_space);
+
+        // let SparseBitMap32s_10k_in_32_bit_key_space = [
+        //     SparseBitMap32.fromIter(random_ids_in_32_bit_key_space_1.vals()),
+        //     SparseBitMap32.fromIter(random_10k_in_32_bit_key_space_2.vals()),
+        //     SparseBitMap32.fromIter(random_10k_in_32_bit_key_space_3.vals()),
+        // ];
+
+        // let SparseBitMap32s_50k_in_32_bit_key_space = [
+        //     SparseBitMap32.fromIter(random_100k_in_32_bit_key_space_1.vals()),
+        //     SparseBitMap32.fromIter(random_50k_in_32_bit_key_space_2.vals()),
+        //     SparseBitMap32.fromIter(random_50k_in_32_bit_key_space_3.vals()),
+        // ];
+
+        // let SparseBitMap32s_80k_in_32_bit_key_space = [
+        //     SparseBitMap32.fromIter(random_1M_in_32_bit_key_space_1.vals()),
+        //     SparseBitMap32.fromIter(random_80k_in_32_bit_key_space_2.vals()),
+        //     SparseBitMap32.fromIter(random_80k_in_32_bit_key_space_3.vals()),
+        // ];
+
+        // let SparseBitMap32s_10k_in_64_bit_key_space = [
+        //     SparseBitMap32.fromIter(random_10k_in_64_bit_key_space_1.vals()),
+        //     SparseBitMap32.fromIter(random_10k_in_64_bit_key_space_2.vals()),
+        //     SparseBitMap32.fromIter(random_10k_in_64_bit_key_space_3.vals()),
+        // ];
 
         bench.runner(
             func(row, col) = switch (col, row) {
 
-                case ("BitMap", "load 10k sequential ids") {
-                    ignore BitMap.fromIter(Iter.range(0, limit - 1));
+                case ("BitMap", "load 1M sequential ids") {
+                    ignore BitMap.fromIter(Iter.range(0, sequential_ids));
                 };
 
-                case ("BitMap", "load 10k random ids in 100k key space") {
+                case ("BitMap", "random ids in 24 bit key space: 10k") {
                     ignore BitMap.fromIter(
-                        random_10k_in_100k_key_space_1.vals()
+                        random_nats_iter(random_ids_in_24_bit_key_space_1, 0, (2 ** 24))
                     );
                 };
 
-                case ("BitMap", "load 10k random ids in 1M key space") {
+                case ("BitMap", "random ids in 24 bit key space: 100k") {
                     ignore BitMap.fromIter(
-                        random_10k_in_1M_key_space_2.vals()
+                        random_nats_iter(random_ids_in_24_bit_key_space_2, 0, (2 ** 24))
                     );
                 };
 
-                case ("BitMap", "load 10k random ids in 10M key space") {
+                case ("BitMap", "random ids in 24 bit key space: 1M") {
                     ignore BitMap.fromIter(
-                        random_10k_in_10M_key_space.vals()
+                        random_nats_iter(random_ids_in_24_bit_key_space_3, 0, (2 ** 24))
                     );
                 };
 
-                case ("BitMap", "load 50k random ids in 100k key space") {
+                case ("BitMap", "random ids in 27 bit key space: 10k") {
                     ignore BitMap.fromIter(
-                        random_50k_in_100k_key_space_1.vals()
+                        random_nats_iter(random_ids_in_27_bit_key_space_1, 0, (2 ** 27))
                     );
                 };
 
-                case ("BitMap", "load 80k random ids in 100k key space") {
+                case ("BitMap", "random ids in 27 bit key space: 100k") {
                     ignore BitMap.fromIter(
-                        random_80k_in_100k_key_space_1.vals()
+                        random_nats_iter(random_ids_in_27_bit_key_space_2, 0, (2 ** 27))
                     );
                 };
 
-                // case ("BitMap", "load 100k random ids in 1M key space") {
+                case ("BitMap", "random ids in 27 bit key space: 1M") {
+                    ignore BitMap.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_3, 0, (2 ** 27))
+                    );
+                };
+
+                case ("BitMap", "random ids in 32 bit key space: 10k") {
+                    ignore BitMap.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_1, 0, (2 ** 32))
+                    );
+                };
+
+                // case ("BitMap", "load 10k random ids in 64 bit key space") {
                 //     ignore BitMap.fromIter(
-                //         random_100k_in_1M_key_space.vals()
+                //         random_10k_in_64_bit_key_space_2.vals()
                 //     );
                 // };
 
-                // case ("BitMap", "load 500k random ids in 1M key space") {
+                // case ("BitMap", "load 10k random ids in 96 bit key space") {
                 //     ignore BitMap.fromIter(
-                //         random_500k_in_1M_key_space.vals()
+                //         random_10k_in_96_bit_key_space.vals()
                 //     );
                 // };
 
-                // case ("BitMap", "load 800k random ids in 1M key space") {
+                case ("BitMap", "random ids in 32 bit key space: 100k") {
+                    ignore BitMap.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_2, 0, (2 ** 32))
+                    );
+                };
+
+                case ("BitMap", "random ids in 32 bit key space: 1M") {
+                    // ignore BitMap.fromIter(
+                    //     random_nats_iter(random_ids_in_32_bit_key_space_3, 0, (2 ** 32))
+                    // );
+                };
+
+                case ("BitMap", "random ids in 64 bit key space: 10k") {
+                    // ignore BitMap.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_1, 0, (2 ** 64))
+                    // );
+                };
+
+                case ("BitMap", "random ids in 64 bit key space: 100k") {
+                    // ignore BitMap.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_2, 0, (2 ** 64))
+                    // );
+                };
+
+                case ("BitMap", "random ids in 64 bit key space: 1M") {
+                    // ignore BitMap.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_3, 0, (2 ** 64))
+                    // );
+                };
+
+                // case ("BitMap", "load 10k random ids in 64 bit key space") {
                 //     ignore BitMap.fromIter(
-                //         random_800k_in_1M_key_space.vals()
+                //         random_32_bit_in_64_bit_key_space.vals()
                 //     );
                 // };
 
-                case ("BitMap", "union() of 3 BitMaps: 10k ids in 100k key space") {
-                    let BitMap1 = BitMaps_10k_in_100k_key_space[0].clone();
-                    let BitMap2 = BitMaps_10k_in_100k_key_space[1];
-                    let BitMap3 = BitMaps_10k_in_100k_key_space[2];
-
-                    BitMap1.union(BitMap2);
-                    BitMap1.union(BitMap3);
-                };
-
-                case ("BitMap", "multiUnion() of 3 BitMaps: 10k ids in 100k key space") {
-                    ignore BitMap.multiUnion(
-                        BitMaps_10k_in_100k_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "union() of 3 BitMaps: 50k ids in 100k key space") {
-                    let BitMap1 = BitMaps_50k_in_100k_key_space[0].clone();
-                    let BitMap2 = BitMaps_50k_in_100k_key_space[1];
-                    let BitMap3 = BitMaps_50k_in_100k_key_space[2];
-
-                    BitMap1.union(BitMap2);
-                    BitMap1.union(BitMap3);
-                };
-
-                case ("BitMap", "multiUnion() of 3 BitMaps: 50k ids in 100k key space") {
-                    ignore BitMap.multiUnion(
-                        BitMaps_50k_in_100k_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "union() of 3 BitMaps: 10k ids in 1M key space") {
-                    let BitMap1 = BitMaps_10k_in_1M_key_space[0].clone();
-                    let BitMap2 = BitMaps_10k_in_1M_key_space[1];
-                    let BitMap3 = BitMaps_10k_in_1M_key_space[2];
-
-                    BitMap1.union(BitMap2);
-                    BitMap1.union(BitMap3);
-                };
-
-                case ("BitMap", "multiUnion() of 3 BitMaps: 10k ids in 1M key space") {
-                    ignore BitMap.multiUnion(
-                        BitMaps_10k_in_1M_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "union() of 3 BitMaps: 80k ids in 100k key space") {
-                    let BitMap1 = BitMaps_80k_in_100k_key_space[0].clone();
-                    let BitMap2 = BitMaps_80k_in_100k_key_space[1];
-                    let BitMap3 = BitMaps_80k_in_100k_key_space[2];
-
-                    BitMap1.union(BitMap2);
-                    BitMap1.union(BitMap3);
-                };
-
-                case ("BitMap", "multiUnion() of 3 BitMaps: 80k ids in 100k key space") {
-                    ignore BitMap.multiUnion(
-                        BitMaps_80k_in_100k_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "intersect() of 3 BitMaps: 10k ids in 100k key space") {
-                    let BitMap1 = BitMaps_10k_in_100k_key_space[0].clone();
-                    let BitMap2 = BitMaps_10k_in_100k_key_space[1];
-                    let BitMap3 = BitMaps_10k_in_100k_key_space[2];
-
-                    BitMap1.intersect(BitMap2);
-                    BitMap1.intersect(BitMap3);
-                };
-
-                case ("BitMap", "multiIntersect() of 3 BitMaps: 10k ids in 100k key space") {
-                    ignore BitMap.multiIntersect(
-                        BitMaps_10k_in_100k_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "intersect() of 3 BitMaps: 50k ids in 100k key space") {
-                    let BitMap1 = BitMaps_50k_in_100k_key_space[0].clone();
-                    let BitMap2 = BitMaps_50k_in_100k_key_space[1];
-                    let BitMap3 = BitMaps_50k_in_100k_key_space[2];
-
-                    BitMap1.intersect(BitMap2);
-                    BitMap1.intersect(BitMap3);
-                };
-
-                case ("BitMap", "multiIntersect() of 3 BitMaps: 50k ids in 100k key space") {
-                    ignore BitMap.multiIntersect(
-                        BitMaps_50k_in_100k_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "intersect() of 3 BitMaps: 80k ids in 100k key space") {
-                    let BitMap1 = BitMaps_80k_in_100k_key_space[0].clone();
-                    let BitMap2 = BitMaps_80k_in_100k_key_space[1];
-                    let BitMap3 = BitMaps_80k_in_100k_key_space[2];
-
-                    BitMap1.intersect(BitMap2);
-                    BitMap1.intersect(BitMap3);
-                };
-
-                case ("BitMap", "multiIntersect() of 3 BitMaps: 80k ids in 100k key space") {
-                    ignore BitMap.multiIntersect(
-                        BitMaps_80k_in_100k_key_space.vals()
-                    );
-                };
-
-                case ("BitMap", "intersect() of 3 BitMaps: 10k ids in 1M key space") {
-                    let BitMap1 = BitMaps_10k_in_1M_key_space[0].clone();
-                    let BitMap2 = BitMaps_10k_in_1M_key_space[1];
-                    let BitMap3 = BitMaps_10k_in_1M_key_space[2];
-
-                    BitMap1.intersect(BitMap2);
-                    BitMap1.intersect(BitMap3);
-                };
-
-                case ("BitMap", "multiIntersect() of 3 BitMaps: 10k ids in 1M key space") {
-                    ignore BitMap.multiIntersect(
-                        BitMaps_10k_in_1M_key_space.vals()
-                    );
-                };
-
-                case ("SparseBitMap", "load 10k sequential ids") {
-                    ignore SparseBitMap.fromIter(Iter.range(0, limit - 1));
-                };
-
-                case ("SparseBitMap", "load 10k random ids in 100k key space") {
-                    ignore SparseBitMap.fromIter(
-                        random_10k_in_100k_key_space_1.vals()
-                    );
-                };
-
-                case ("SparseBitMap", "load 10k random ids in 1M key space") {
-                    ignore SparseBitMap.fromIter(
-                        random_10k_in_1M_key_space_2.vals()
-                    );
-                };
-
-                case ("SparseBitMap", "load 10k random ids in 10M key space") {
-                    ignore SparseBitMap.fromIter(
-                        random_10k_in_10M_key_space.vals()
-                    );
-                };
-
-                case ("SparseBitMap", "load 50k random ids in 100k key space") {
-                    ignore SparseBitMap.fromIter(
-                        random_50k_in_100k_key_space_1.vals()
-                    );
-                };
-
-                case ("SparseBitMap", "load 80k random ids in 100k key space") {
-                    ignore SparseBitMap.fromIter(
-                        random_80k_in_100k_key_space_1.vals()
-                    );
-                };
-
-                // case ("SparseBitMap", "load 100k random ids in 1M key space") {
-                //     ignore SparseBitMap.fromIter(
-                //         random_100k_in_1M_key_space.vals()
+                // case ("BitMap", "load 500k random ids in 64 bit key space") {
+                //     ignore BitMap.fromIter(
+                //         random_500k_in_64_bit_key_space.vals()
                 //     );
                 // };
 
-                // case ("SparseBitMap", "load 500k random ids in 1M key space") {
-                //     ignore SparseBitMap.fromIter(
-                //         random_500k_in_1M_key_space.vals()
+                // case ("BitMap", "load 800k random ids in 64 bit key space") {
+                //     ignore BitMap.fromIter(
+                //         random_800k_in_64_bit_key_space.vals()
                 //     );
                 // };
 
-                // case ("SparseBitMap", "load 800k random ids in 1M key space") {
-                //     ignore SparseBitMap.fromIter(
-                //         random_800k_in_1M_key_space.vals()
+                // case ("BitMap", "union() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     let BitMap1 = BitMaps_10k_in_32_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_10k_in_32_bit_key_space[1];
+                //     let BitMap3 = BitMaps_10k_in_32_bit_key_space[2];
+
+                //     BitMap1.union(BitMap2);
+                //     BitMap1.union(BitMap3);
+                // };
+
+                // case ("BitMap", "multiUnion() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     ignore BitMap.multiUnion(
+                //         BitMaps_10k_in_32_bit_key_space.vals()
                 //     );
                 // };
 
-                case ("SparseBitMap", "union() of 3 BitMaps: 10k ids in 100k key space") {
-                    let SparseBitMap1 = SparseBitMaps_10k_in_100k_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_10k_in_100k_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_10k_in_100k_key_space[2];
+                // case ("BitMap", "union() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     let BitMap1 = BitMaps_50k_in_32_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_50k_in_32_bit_key_space[1];
+                //     let BitMap3 = BitMaps_50k_in_32_bit_key_space[2];
 
-                    SparseBitMap1.union(SparseBitMap2);
-                    SparseBitMap1.union(SparseBitMap3);
+                //     BitMap1.union(BitMap2);
+                //     BitMap1.union(BitMap3);
+                // };
+
+                // case ("BitMap", "multiUnion() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     ignore BitMap.multiUnion(
+                //         BitMaps_50k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("BitMap", "union() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     let BitMap1 = BitMaps_10k_in_64_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_10k_in_64_bit_key_space[1];
+                //     let BitMap3 = BitMaps_10k_in_64_bit_key_space[2];
+
+                //     BitMap1.union(BitMap2);
+                //     BitMap1.union(BitMap3);
+                // };
+
+                // case ("BitMap", "multiUnion() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     ignore BitMap.multiUnion(
+                //         BitMaps_10k_in_64_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("BitMap", "union() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     let BitMap1 = BitMaps_80k_in_32_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_80k_in_32_bit_key_space[1];
+                //     let BitMap3 = BitMaps_80k_in_32_bit_key_space[2];
+
+                //     BitMap1.union(BitMap2);
+                //     BitMap1.union(BitMap3);
+                // };
+
+                // case ("BitMap", "multiUnion() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     ignore BitMap.multiUnion(
+                //         BitMaps_80k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("BitMap", "intersect() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     let BitMap1 = BitMaps_10k_in_32_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_10k_in_32_bit_key_space[1];
+                //     let BitMap3 = BitMaps_10k_in_32_bit_key_space[2];
+
+                //     BitMap1.intersect(BitMap2);
+                //     BitMap1.intersect(BitMap3);
+                // };
+
+                // case ("BitMap", "multiIntersect() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     ignore BitMap.multiIntersect(
+                //         BitMaps_10k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("BitMap", "intersect() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     let BitMap1 = BitMaps_50k_in_32_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_50k_in_32_bit_key_space[1];
+                //     let BitMap3 = BitMaps_50k_in_32_bit_key_space[2];
+
+                //     BitMap1.intersect(BitMap2);
+                //     BitMap1.intersect(BitMap3);
+                // };
+
+                // case ("BitMap", "multiIntersect() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     ignore BitMap.multiIntersect(
+                //         BitMaps_50k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("BitMap", "intersect() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     let BitMap1 = BitMaps_80k_in_32_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_80k_in_32_bit_key_space[1];
+                //     let BitMap3 = BitMaps_80k_in_32_bit_key_space[2];
+
+                //     BitMap1.intersect(BitMap2);
+                //     BitMap1.intersect(BitMap3);
+                // };
+
+                // case ("BitMap", "multiIntersect() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     ignore BitMap.multiIntersect(
+                //         BitMaps_80k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("BitMap", "intersect() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     let BitMap1 = BitMaps_10k_in_64_bit_key_space[0].clone();
+                //     let BitMap2 = BitMaps_10k_in_64_bit_key_space[1];
+                //     let BitMap3 = BitMaps_10k_in_64_bit_key_space[2];
+
+                //     BitMap1.intersect(BitMap2);
+                //     BitMap1.intersect(BitMap3);
+                // };
+
+                // case ("BitMap", "multiIntersect() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     ignore BitMap.multiIntersect(
+                //         BitMaps_10k_in_64_bit_key_space.vals()
+                //     );
+                // };
+
+                case ("SparseBitMap32", "load 1M sequential ids") {
+                    ignore SparseBitMap32.fromIter(Iter.range(0, sequential_ids));
                 };
 
-                case ("SparseBitMap", "multiUnion() of 3 BitMaps: 10k ids in 100k key space") {
-                    ignore SparseBitMap.multiUnion(
-                        SparseBitMaps_10k_in_100k_key_space.vals()
+                case ("SparseBitMap32", "random ids in 24 bit key space: 10k") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_24_bit_key_space_1, 0, (2 ** 24))
                     );
                 };
 
-                case ("SparseBitMap", "union() of 3 BitMaps: 50k ids in 100k key space") {
-                    let SparseBitMap1 = SparseBitMaps_50k_in_100k_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_50k_in_100k_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_50k_in_100k_key_space[2];
-
-                    SparseBitMap1.union(SparseBitMap2);
-                    SparseBitMap1.union(SparseBitMap3);
-                };
-
-                case ("SparseBitMap", "multiUnion() of 3 BitMaps: 50k ids in 100k key space") {
-                    ignore SparseBitMap.multiUnion(
-                        SparseBitMaps_50k_in_100k_key_space.vals()
+                case ("SparseBitMap32", "random ids in 24 bit key space: 100k") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_24_bit_key_space_2, 0, (2 ** 24))
                     );
                 };
 
-                case ("SparseBitMap", "union() of 3 BitMaps: 80k ids in 100k key space") {
-                    let SparseBitMap1 = SparseBitMaps_80k_in_100k_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_80k_in_100k_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_80k_in_100k_key_space[2];
-
-                    SparseBitMap1.union(SparseBitMap2);
-                    SparseBitMap1.union(SparseBitMap3);
-                };
-
-                case ("SparseBitMap", "multiUnion() of 3 BitMaps: 80k ids in 100k key space") {
-                    ignore SparseBitMap.multiUnion(
-                        SparseBitMaps_80k_in_100k_key_space.vals()
+                case ("SparseBitMap32", "random ids in 24 bit key space: 1M") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_24_bit_key_space_3, 0, (2 ** 24))
                     );
                 };
 
-                case ("SparseBitMap", "union() of 3 BitMaps: 10k ids in 1M key space") {
-                    let SparseBitMap1 = SparseBitMaps_10k_in_1M_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_10k_in_1M_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_10k_in_1M_key_space[2];
-
-                    SparseBitMap1.union(SparseBitMap2);
-                    SparseBitMap1.union(SparseBitMap3);
-                };
-
-                case ("SparseBitMap", "multiUnion() of 3 BitMaps: 10k ids in 1M key space") {
-                    ignore SparseBitMap.multiUnion(
-                        SparseBitMaps_10k_in_1M_key_space.vals()
+                case ("SparseBitMap32", "random ids in 27 bit key space: 10k") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_1, 0, (2 ** 27))
                     );
                 };
 
-                case ("SparseBitMap", "intersect() of 3 BitMaps: 10k ids in 100k key space") {
-                    let SparseBitMap1 = SparseBitMaps_10k_in_100k_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_10k_in_100k_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_10k_in_100k_key_space[2];
-
-                    SparseBitMap1.intersect(SparseBitMap2);
-                    SparseBitMap1.intersect(SparseBitMap3);
-                };
-
-                case ("SparseBitMap", "multiIntersect() of 3 BitMaps: 10k ids in 100k key space") {
-                    ignore SparseBitMap.multiIntersect(
-                        SparseBitMaps_10k_in_100k_key_space.vals()
+                case ("SparseBitMap32", "random ids in 27 bit key space: 100k") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_2, 0, (2 ** 27))
                     );
                 };
 
-                case ("SparseBitMap", "intersect() of 3 BitMaps: 50k ids in 100k key space") {
-                    let SparseBitMap1 = SparseBitMaps_50k_in_100k_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_50k_in_100k_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_50k_in_100k_key_space[2];
-
-                    SparseBitMap1.intersect(SparseBitMap2);
-                    SparseBitMap1.intersect(SparseBitMap3);
-                };
-
-                case ("SparseBitMap", "multiIntersect() of 3 BitMaps: 50k ids in 100k key space") {
-                    ignore SparseBitMap.multiIntersect(
-                        SparseBitMaps_50k_in_100k_key_space.vals()
+                case ("SparseBitMap32", "random ids in 27 bit key space: 1M") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_3, 0, (2 ** 27))
                     );
                 };
 
-                case ("SparseBitMap", "intersect() of 3 BitMaps: 80k ids in 100k key space") {
-                    let SparseBitMap1 = SparseBitMaps_80k_in_100k_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_80k_in_100k_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_80k_in_100k_key_space[2];
-
-                    SparseBitMap1.intersect(SparseBitMap2);
-                    SparseBitMap1.intersect(SparseBitMap3);
-                };
-
-                case ("SparseBitMap", "multiIntersect() of 3 BitMaps: 80k ids in 100k key space") {
-                    ignore SparseBitMap.multiIntersect(
-                        SparseBitMaps_80k_in_100k_key_space.vals()
+                case ("SparseBitMap32", "random ids in 32 bit key space: 10k") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_1, 0, (2 ** 32))
                     );
                 };
 
-                case ("SparseBitMap", "intersect() of 3 BitMaps: 10k ids in 1M key space") {
-                    let SparseBitMap1 = SparseBitMaps_10k_in_1M_key_space[0].clone();
-                    let SparseBitMap2 = SparseBitMaps_10k_in_1M_key_space[1];
-                    let SparseBitMap3 = SparseBitMaps_10k_in_1M_key_space[2];
+                // case ("SparseBitMap32", "load 10k random ids in 64 bit key space") {
+                //     ignore SparseBitMap32.fromIter(
+                //         random_10k_in_64_bit_key_space_2.vals()
+                //     );
+                // };
 
-                    SparseBitMap1.intersect(SparseBitMap2);
-                    SparseBitMap1.intersect(SparseBitMap3);
-                };
+                // case ("SparseBitMap32", "load 10k random ids in 96 bit key space") {
+                //     ignore SparseBitMap32.fromIter(
+                //         random_10k_in_96_bit_key_space.vals()
+                //     );
+                // };
 
-                case ("SparseBitMap", "multiIntersect() of 3 BitMaps: 10k ids in 1M key space") {
-                    ignore SparseBitMap.multiIntersect(
-                        SparseBitMaps_10k_in_1M_key_space.vals()
+                case ("SparseBitMap32", "random ids in 32 bit key space: 100k") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_2, 0, (2 ** 32))
                     );
                 };
+
+                case ("SparseBitMap32", "random ids in 32 bit key space: 1M") {
+                    ignore SparseBitMap32.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_3, 0, (2 ** 32))
+                    );
+                };
+
+                case ("SparseBitMap32", "random ids in 64 bit key space: 10k") {
+                    // ignore SparseBitMap32.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_1, 0, (2 ** 64))
+                    // );
+                };
+
+                case ("SparseBitMap32", "random ids in 64 bit key space: 100k") {
+                    // ignore SparseBitMap32.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_2, 0, (2 ** 64))
+                    // );
+                };
+
+                case ("SparseBitMap32", "random ids in 64 bit key space: 1M") {
+                    // ignore SparseBitMap32.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_3, 0, (2 ** 64))
+                    // );
+                };
+
+                // SparseBitMap64 benchmarks
+                case ("SparseBitMap64", "load 1M sequential ids") {
+                    ignore SparseBitMap64.fromIter(Iter.range(0, sequential_ids));
+                };
+
+                case ("SparseBitMap64", "random ids in 24 bit key space: 10k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_24_bit_key_space_1, 0, (2 ** 24))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 24 bit key space: 100k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_24_bit_key_space_2, 0, (2 ** 24))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 24 bit key space: 1M") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_24_bit_key_space_3, 0, (2 ** 24))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 27 bit key space: 10k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_1, 0, (2 ** 27))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 27 bit key space: 100k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_2, 0, (2 ** 27))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 27 bit key space: 1M") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_27_bit_key_space_3, 0, (2 ** 27))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 32 bit key space: 10k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_1, 0, (2 ** 32))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 32 bit key space: 100k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_2, 0, (2 ** 32))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 32 bit key space: 1M") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_32_bit_key_space_3, 0, (2 ** 32))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 64 bit key space: 10k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_64_bit_key_space_1, 0, (2 ** 64))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 64 bit key space: 100k") {
+                    ignore SparseBitMap64.fromIter(
+                        random_nats_iter(random_ids_in_64_bit_key_space_2, 0, (2 ** 64))
+                    );
+                };
+
+                case ("SparseBitMap64", "random ids in 64 bit key space: 1M") {
+                    // ignore SparseBitMap64.fromIter(
+                    //     random_nats_iter(random_ids_in_64_bit_key_space_3, 0, (2 ** 64))
+                    // );
+                };
+
+                // // case ("SparseBitMap32", "load 32 bit random ids in 64 bit key space") {
+                // //     ignore SparseBitMap32.fromIter(
+                // //         random_32_bit_in_64_bit_key_space.vals()
+                // //     );
+                // // };
+
+                // // case ("SparseBitMap32", "load 500k random ids in 64 bit key space") {
+                // //     ignore SparseBitMap32.fromIter(
+                // //         random_500k_in_64_bit_key_space.vals()
+                // //     );
+                // // };
+
+                // // case ("SparseBitMap32", "load 800k random ids in 64 bit key space") {
+                // //     ignore SparseBitMap32.fromIter(
+                // //         random_800k_in_64_bit_key_space.vals()
+                // //     );
+                // // };
+
+                // case ("SparseBitMap32", "union() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_10k_in_32_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_10k_in_32_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_10k_in_32_bit_key_space[2];
+
+                //     SparseBitMap321.union(SparseBitMap322);
+                //     SparseBitMap321.union(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiUnion() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     ignore SparseBitMap32.multiUnion(
+                //         SparseBitMap32s_10k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "union() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_50k_in_32_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_50k_in_32_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_50k_in_32_bit_key_space[2];
+
+                //     SparseBitMap321.union(SparseBitMap322);
+                //     SparseBitMap321.union(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiUnion() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     ignore SparseBitMap32.multiUnion(
+                //         SparseBitMap32s_50k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "union() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_80k_in_32_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_80k_in_32_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_80k_in_32_bit_key_space[2];
+
+                //     SparseBitMap321.union(SparseBitMap322);
+                //     SparseBitMap321.union(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiUnion() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     ignore SparseBitMap32.multiUnion(
+                //         SparseBitMap32s_80k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "union() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_10k_in_64_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_10k_in_64_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_10k_in_64_bit_key_space[2];
+
+                //     SparseBitMap321.union(SparseBitMap322);
+                //     SparseBitMap321.union(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiUnion() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     ignore SparseBitMap32.multiUnion(
+                //         SparseBitMap32s_10k_in_64_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "intersect() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_10k_in_32_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_10k_in_32_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_10k_in_32_bit_key_space[2];
+
+                //     SparseBitMap321.intersect(SparseBitMap322);
+                //     SparseBitMap321.intersect(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiIntersect() of 3 BitMaps: 10k ids in 32 bit key space") {
+                //     ignore SparseBitMap32.multiIntersect(
+                //         SparseBitMap32s_10k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "intersect() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_50k_in_32_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_50k_in_32_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_50k_in_32_bit_key_space[2];
+
+                //     SparseBitMap321.intersect(SparseBitMap322);
+                //     SparseBitMap321.intersect(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiIntersect() of 3 BitMaps: 50k ids in 32 bit key space") {
+                //     ignore SparseBitMap32.multiIntersect(
+                //         SparseBitMap32s_50k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "intersect() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_80k_in_32_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_80k_in_32_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_80k_in_32_bit_key_space[2];
+
+                //     SparseBitMap321.intersect(SparseBitMap322);
+                //     SparseBitMap321.intersect(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiIntersect() of 3 BitMaps: 80k ids in 32 bit key space") {
+                //     ignore SparseBitMap32.multiIntersect(
+                //         SparseBitMap32s_80k_in_32_bit_key_space.vals()
+                //     );
+                // };
+
+                // case ("SparseBitMap32", "intersect() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     let SparseBitMap321 = SparseBitMap32s_10k_in_64_bit_key_space[0].clone();
+                //     let SparseBitMap322 = SparseBitMap32s_10k_in_64_bit_key_space[1];
+                //     let SparseBitMap323 = SparseBitMap32s_10k_in_64_bit_key_space[2];
+
+                //     SparseBitMap321.intersect(SparseBitMap322);
+                //     SparseBitMap321.intersect(SparseBitMap323);
+                // };
+
+                // case ("SparseBitMap32", "multiIntersect() of 3 BitMaps: 10k ids in 64 bit key space") {
+                //     ignore SparseBitMap32.multiIntersect(
+                //         SparseBitMap32s_10k_in_64_bit_key_space.vals()
+                //     );
+                // };
 
                 case (_) {
                     Debug.trap("Should be unreachable:\n row = \"" # debug_show row # "\" and col = \"" # debug_show col # "\"");
