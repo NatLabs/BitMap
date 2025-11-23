@@ -1,16 +1,16 @@
 [package]
 name = "bit-map"
-version = "1.0.0"
+version = "1.1.0"
 description = "A data structure for fast set operations on a set of integers each represented by a bit."
 repository = "https://github.com/NatLabs/BitMap"
 keywords = ["set", "bitmap", "data-structure"]
 license = "MIT"
 
 [dependencies]
-'base@0.16.0' = "0.16.0"
-'map@9.0.1' = "9.0.1"
-'itertools@0.2.2' = "0.2.2"
-'vector@0.4.2' = "0.4.2"
+"base@0.16.0" = "0.16.0"
+"map@9.0.1" = "9.0.1"
+"itertools@0.2.2" = "0.2.2"
+"vector@0.4.2" = "0.4.2"
 
 [dev-dependencies]
 test = "2.1.1"
@@ -20,3 +20,4 @@ augmented-btrees = "0.7.1"
 
 [toolchain]
 moc = "0.16.0"
+wasmtime = "33.0.1"

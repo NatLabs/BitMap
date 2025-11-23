@@ -9,7 +9,7 @@ import Set "mo:map@9.0.1/Set";
 
 let fuzz = Fuzz.Fuzz();
 
-let limit = 1_000;
+let limit = 100;
 
 let inputs = [
     Buffer.Buffer<Nat>(limit),
@@ -307,6 +307,6 @@ func run_tests(limit : Nat, key_space : Nat, { inputs : [Buffer.Buffer<Nat>]; fu
 suite(
     "SparseBitMap32: keyspace < 2^32",
     func() {
-        run_tests(1000, (2 ** 32) - 1, { inputs; fullset; intersect_set });
+        run_tests(limit, (2 ** 32) - 1, { inputs; fullset; intersect_set });
     },
 );

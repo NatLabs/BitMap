@@ -112,7 +112,8 @@ module {
         switch (Map.get(bitmap.store, Map.nhash, key)) {
             case (?container) { container };
             case (null) {
-                let container = BitMap.new(2 ** 16);
+                // Pre-allocate exactly 1024 words (65536 bits / 64 bits per word)
+                let container = BitMap.new(1024);
                 Map.set(bitmap.store, Map.nhash, key, container);
                 container;
             };
